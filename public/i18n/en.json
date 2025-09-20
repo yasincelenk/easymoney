@@ -1,0 +1,13 @@
+{
+  "auth": {
+    "title": "Sign in to Signloop",
+    "subtitle": "Receive a magic link via email or continue with Google."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "contracts": "Contracts",
+    "templates": "Templates",
+    "team": "Team",
+    "settings": "Settings"
+  }
+}

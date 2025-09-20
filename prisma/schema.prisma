@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+}
+
+enum Jurisdiction {
+  TR
+  INTL
+}
+
+enum Language {
+  tr
+  en
+}
+
+enum ContractStatus {
+  DRAFT
+  REVIEW
+  SIGNING
+  SIGNED
+  EXPIRED
+  CANCELLED
+}
+
+enum PartyRole {
+  OWNER
+  COUNTERPARTY
+}
+
+enum SignatureProvider {
+  MANUAL
+  EGUVEN
+  TURKTRUST
+}
+
+enum SignatureStatus {
+  PENDING
+  SIGNED
+  DECLINED
+}
+
+enum ReminderKind {
+  RENEWAL
+  EXPIRY
+}
+
+model User {
+  id        String       @id @default(cuid())
+  email     String       @unique
+  name      String?
+  image     String?
+  createdAt DateTime     @default(now())
+  memberships Membership[]
+  auditLogs   AuditLog[] @relation("AuditActor")
+}
+
+model Account {
+  id        String       @id @default(cuid())
+  name      String
+  taxId     String?
+  locale    String       @default("tr")
+  timezone  String       @default("Europe/Istanbul")
+  esignProvider SignatureProvider @default(MANUAL)
+  createdAt DateTime     @default(now())
+  memberships Membership[]
+  subscriptions Subscription[]
+  templates  Template[]
+  contracts  Contract[]
+  files      FileAsset[]
+  auditLogs  AuditLog[]
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  account   Account  @relation(fields: [accountId], references: [id])
+  accountId String
+  role      Role
+
+  @@unique([userId, accountId])
+}
+
+model Subscription {
+  id                String   @id @default(cuid())
+  account           Account  @relation(fields: [accountId], references: [id])
+  accountId         String
+  plan              Plan
+  status            String
+  currentPeriodEnd  DateTime?
+  createdAt         DateTime @default(now())
+}
+
+model Template {
+  id             String      @id @default(cuid())
+  account        Account     @relation(fields: [accountId], references: [id])
+  accountId      String
+  title          String
+  jurisdiction   Jurisdiction
+  language       Language
+  bodyRichtext   Json
+  placeholders   String[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  contracts      Contract[]
+}
+
+model Contract {
+  id               String            @id @default(cuid())
+  account          Account           @relation(fields: [accountId], references: [id])
+  accountId        String
+  template         Template?         @relation(fields: [templateId], references: [id])
+  templateId       String?
+  title            String
+  type             String?
+  language         Language
+  status           ContractStatus
+  effectiveAt      DateTime?
+  endAt            DateTime?
+  counterpartyName String?
+  counterpartyEmail String?
+  tags             String[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  versions         ContractVersion[]
+  parties          Party[]
+  signatures       Signature[]
+  reminders        Reminder[]
+  files            FileAsset[]
+  auditLogs        AuditLog[] @relation("AuditContract")
+
+  @@index([accountId, status])
+  @@index([accountId, updatedAt(sort: Desc)])
+  @@index([accountId, endAt])
+}
+
+model ContractVersion {
+  id         String   @id @default(cuid())
+  contract   Contract @relation(fields: [contractId], references: [id])
+  contractId String
+  versionNo  Int
+  bodyRichtext Json
+  createdBy  String?
+  createdAt  DateTime @default(now())
+}
+
+model Party {
+  id         String   @id @default(cuid())
+  contract   Contract @relation(fields: [contractId], references: [id])
+  contractId String
+  name       String
+  email      String
+  role       PartyRole
+}
+
+model Signature {
+  id         String   @id @default(cuid())
+  contract   Contract @relation(fields: [contractId], references: [id])
+  contractId String
+  party      Party    @relation(fields: [partyId], references: [id])
+  partyId    String
+  provider   SignatureProvider
+  status     SignatureStatus
+  signedAt   DateTime?
+  envelopeId String?
+  evidence   Json?
+}
+
+model Reminder {
+  id         String   @id @default(cuid())
+  contract   Contract @relation(fields: [contractId], references: [id])
+  contractId String
+  kind       ReminderKind
+  dueAt      DateTime
+  sentAt     DateTime?
+}
+
+model FileAsset {
+  id         String   @id @default(cuid())
+  account    Account  @relation(fields: [accountId], references: [id])
+  accountId  String
+  contract   Contract? @relation(fields: [contractId], references: [id])
+  contractId String?
+  path       String
+  mime       String
+  size       Int
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  account    Account  @relation(fields: [accountId], references: [id])
+  accountId  String
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id])
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String?
+  meta       Json?
+  contract   Contract? @relation("AuditContract", fields: [contractId], references: [id])
+  contractId String?
+  createdAt  DateTime @default(now())
+}
