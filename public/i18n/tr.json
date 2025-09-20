@@ -1,0 +1,13 @@
+{
+  "auth": {
+    "title": "Signloop'a giriş yapın",
+    "subtitle": "E-posta ile sihirli bağlantı alın veya Google hesabınızı kullanın."
+  },
+  "nav": {
+    "dashboard": "Kontrol Paneli",
+    "contracts": "Sözleşmeler",
+    "templates": "Şablonlar",
+    "team": "Ekip",
+    "settings": "Ayarlar"
+  }
+}
